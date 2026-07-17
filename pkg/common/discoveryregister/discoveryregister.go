@@ -17,30 +17,39 @@ package discoveryregister
 import (
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/openimsdk/open-im-server/v3/pkg/common/config"
 	"github.com/openimsdk/tools/discovery"
 	"github.com/openimsdk/tools/discovery/etcd"
 	"github.com/openimsdk/tools/discovery/kubernetes"
 	"github.com/openimsdk/tools/errs"
 	"github.com/openimsdk/tools/utils/runtimeenv"
-	"google.golang.org/grpc"
 )
 
 // NewDiscoveryRegister creates a new service discovery and registry client based on the provided environment type.
-func NewDiscoveryRegister(discovery *config.Discovery, share *config.Share, watchNames []string) (discovery.SvcDiscoveryRegistry, error) {
-	if runtimeenv.RuntimeEnvironment() == config.KUBERNETES {
+func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (discovery.SvcDiscoveryRegistry, error) {
+	runtimeEnvironment := runtimeenv.RuntimeEnvironment()
+	discoveryType := discovery.Enable
+	if discoveryType == "" && runtimeEnvironment == config.KUBERNETES {
+		discoveryType = config.KUBERNETES
+	}
+	if discoveryType == config.KUBERNETES && runtimeEnvironment != config.KUBERNETES {
+		return nil, errs.New("unsupported discovery type", "type", discoveryType).Wrap()
+	}
+	switch discoveryType {
+	case config.KUBERNETES:
 		namespace := discovery.Kubernetes.Namespace
 		if namespace == "" {
 			namespace = "default"
 		}
-		return kubernetes.NewConnManager(namespace, watchNames,
+		return kubernetes.NewConnManager(
+			namespace,
+			watchNames,
 			grpc.WithDefaultCallOptions(
-				grpc.MaxCallSendMsgSize(1024*1024*20),
+				grpc.MaxCallSendMsgSize(20*1024*1024),
 			),
 		)
-	}
-
-	switch discovery.Enable {
 	case config.ETCD:
 		return etcd.NewSvcDiscoveryRegistry(
 			discovery.Etcd.RootDirectory,
@@ -50,6 +59,6 @@ func NewDiscoveryRegister(discovery *config.Discovery, share *config.Share, watc
 			etcd.WithMaxCallSendMsgSize(20*1024*1024),
 			etcd.WithUsernameAndPassword(discovery.Etcd.Username, discovery.Etcd.Password))
 	default:
-		return nil, errs.New("unsupported discovery type", "type", discovery.Enable).Wrap()
+		return nil, errs.New("unsupported discovery type", "type", discoveryType).Wrap()
 	}
 }
