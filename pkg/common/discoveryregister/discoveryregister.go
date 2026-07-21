@@ -15,6 +15,7 @@
 package discoveryregister
 
 import (
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -39,16 +40,14 @@ func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (dis
 	}
 	switch discoveryType {
 	case config.KUBERNETES:
-		namespace := discovery.Kubernetes.Namespace
-		if namespace == "" {
-			namespace = "default"
+		for i := range watchNames {
+			watchNames[i] = strings.Split(watchNames[i], ":")[0]
 		}
-		return kubernetes.NewConnManager(
-			namespace,
-			watchNames,
+		return kubernetes.NewConnManager(discovery.Kubernetes.Namespace, watchNames,
 			grpc.WithDefaultCallOptions(
-				grpc.MaxCallSendMsgSize(20*1024*1024),
+				grpc.MaxCallSendMsgSize(1024*1024*20),
 			),
+			grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
 		)
 	case config.ETCD:
 		return etcd.NewSvcDiscoveryRegistry(
