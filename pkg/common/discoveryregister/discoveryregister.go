@@ -29,7 +29,7 @@ import (
 )
 
 // NewDiscoveryRegister creates a new service discovery and registry client based on the provided environment type.
-func NewDiscoveryRegister(discovery *config.Discovery, watchNames []string) (discovery.SvcDiscoveryRegistry, error) {
+func NewDiscoveryRegister(discovery *config.Discovery, share *config.Share, watchNames []string) (discovery.SvcDiscoveryRegistry, error) {
 	runtimeEnvironment := runtimeenv.RuntimeEnvironment()
 	discoveryType := discovery.Enable
 	if discoveryType == "" && runtimeEnvironment == config.KUBERNETES {
