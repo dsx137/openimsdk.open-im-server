@@ -74,6 +74,7 @@ services:
 
   etcd:
     image: "${ETCD_IMAGE}"
+    user: root
     container_name: etcd
     ports:
       - "12379:2379"
@@ -110,7 +111,7 @@ services:
           [ "$$ETCD_ROOT_USER" = root ] && [ "$$ETCD_USERNAME" != root ] || fail "etcd requires ETCD_ROOT_USER=root and a separate application user."
           auth=yes
         fi
-        [ -d /etcd-data ] && [ -w /etcd-data ] && [ -x /etcd-data ] || fail "/etcd-data must be writable and searchable by UID 1001."
+        [ -d /etcd-data ] && [ -w /etcd-data ] && [ -x /etcd-data ] || fail "/etcd-data must be writable and searchable."
         (unset ETCD_ROOT_USER ETCD_ROOT_PASSWORD ETCD_USERNAME ETCD_PASSWORD; ETCD_DATA_DIR=/etcd-data exec etcd) &
         daemon=$$!
         cleanup() {
@@ -238,7 +239,7 @@ services:
 
   minio:
     image: "${MINIO_IMAGE}"
-    user: "0:0"
+    user: root
     ports:
       - "10005:9000"
       - "19090:9090"
